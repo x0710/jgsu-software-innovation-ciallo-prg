@@ -25,6 +25,8 @@ async fn main() {
     let app = Router::new()
         .route("/", get(routes::index))
         .route("/api/questions", post(routes::create_question))
+        .route("/api/questions", get(routes::questions_api))
+        .route("/api/questions/answer", post(routes::answer_question))
         .nest_service("/static", ServeDir::new("static"))
         .layer(CorsLayer::permissive())
         .with_state(pool);

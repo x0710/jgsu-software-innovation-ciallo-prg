@@ -3,7 +3,7 @@ use std::env;
 
 pub async fn create_pool() -> Result<SqlitePool, sqlx::Error> {
     let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite:///home/x0710/soft26app/26softapp.db".to_string());
+        .unwrap_or_else(|_| "sqlite://blog.db".to_string());
 
     let pool = SqlitePool::connect(&database_url).await?;
 
@@ -22,7 +22,7 @@ pub async fn create_pool() -> Result<SqlitePool, sqlx::Error> {
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS timeline_events (
-            id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,
             weekday TEXT NOT NULL,
             time TEXT NOT NULL,
@@ -100,9 +100,8 @@ async fn seed_timeline(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
     for (date, weekday, time, title, event_type) in &events {
         sqlx::query(
-            "INSERT INTO timeline_events (id, date, weekday, time, title, event_type) VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO timeline_events (date, weekday, time, title, event_type) VALUES (?, ?, ?, ?, ?)"
         )
-        .bind(uuid::Uuid::new_v4().to_string())
         .bind(date)
         .bind(weekday)
         .bind(time)

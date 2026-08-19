@@ -1,4 +1,4 @@
-use crate::models::{NewQuestion, Question, TimelineEvent};
+use crate::models::{NewAnswer, NewQuestion, Question, TimelineEvent};
 use askama::Template;
 use axum::{
     extract::State,
@@ -6,6 +6,7 @@ use axum::{
     response::{Html, Json},
 };
 use sqlx::SqlitePool;
+use tracing::error;
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -15,15 +16,17 @@ struct IndexTemplate {
 }
 
 pub async fn index(State(pool): State<SqlitePool>) -> Result<Html<String>, StatusCode> {
-    let questions = sqlx::query_as::<_, Question>("SELECT * FROM questions ORDER BY created_at DESC")
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let timeline = sqlx::query_as::<_, TimelineEvent>("SELECT * FROM timeline_events ORDER BY date")
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let questions = get_questions(&pool).await
+        .map_err(|e| {
+            error!(error=?e, "error getting questions");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    let mut timeline = get_timeline(&pool).await
+        .map_err(|e| {
+            error!(error=?e, "error getting timeline");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    timeline.sort();
 
     let template = IndexTemplate {
         questions,
@@ -34,6 +37,24 @@ pub async fn index(State(pool): State<SqlitePool>) -> Result<Html<String>, Statu
         .render()
         .map(|html| Html(html))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+pub async fn timeline_api(State(pool): State<SqlitePool>) -> Result<Json<Vec<TimelineEvent>>, StatusCode> {
+    Ok(Json(get_timeline(&pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+}
+pub async fn questions_api(State(pool): State<SqlitePool>) -> Result<Json<Vec<Question>>, StatusCode> {
+    Ok(Json(get_questions(&pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+}
+async fn get_timeline(pool: &SqlitePool) -> Result<Vec<TimelineEvent>, sqlx::Error> {
+    let timeline = sqlx::query_as::<_, TimelineEvent>("SELECT * FROM timeline_events ORDER BY date")
+        .fetch_all(pool)
+        .await?;
+    Ok(timeline)
+}
+async fn get_questions(pool: &SqlitePool) -> Result<Vec<Question>, sqlx::Error> {
+    let questions = sqlx::query_as::<_, Question>("SELECT * FROM questions ORDER BY created_at DESC")
+        .fetch_all(pool)
+        .await?;
+    Ok(questions)
 }
 
 pub async fn create_question(
@@ -63,6 +84,22 @@ pub async fn create_question(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(question))
+}
+
+pub async fn answer_question(
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<NewAnswer>,
+) -> Result<(), StatusCode> {
+    sqlx::query(
+        "UPDATE questions SET answer = ? WHERE id = ?",
+    )
+        .bind(payload.answer)
+        .bind(payload.id)
+        .execute(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(())
 }
 
 fn rand_index() -> usize {

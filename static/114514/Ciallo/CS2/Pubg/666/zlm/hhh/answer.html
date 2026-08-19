@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>问题回复 - 井冈山大学软件创新实验室</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <style>
+        .answer-page {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 30px 20px 100px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .page-title h1 {
+            display: inline-block;
+            font-size: 32px;
+            background: linear-gradient(135deg, #ed8936, #d53f8c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            text-align: center;
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 220px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+            background: #fff;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #ed8936;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #68d391, #38a169);
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(104,211,145,0.4);
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(104,211,145,0.6);
+        }
+
+        .status-banner {
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ed8936;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            color: #4a5568;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-banner.error {
+            border-left-color: #fc8181;
+            background: #fff5f5;
+        }
+
+        .status-banner.success {
+            border-left-color: #68d391;
+            background: #f0fff4;
+        }
+
+        .question-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .question-item {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .question-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .question-item.answered {
+            border-left: 4px solid #68d391;
+        }
+
+        .question-item.pending {
+            border-left: 4px solid #f6ad55;
+        }
+
+        .q-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .q-title {
+            font-size: 18px;
+            color: #2d3748;
+            font-weight: bold;
+            line-height: 1.5;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .q-badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .q-badge.pending {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .q-badge.answered {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .q-info {
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 14px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .q-info span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .current-answer {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            border: 1px dashed #cbd5e0;
+        }
+
+        .current-answer-label {
+            font-size: 12px;
+            color: #ed8936;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .current-answer-text {
+            color: #4a5568;
+            font-size: 14px;
+            line-height: 1.7;
+            white-space: pre-line;
+        }
+
+        .answer-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .answer-input {
+            flex: 1;
+            min-width: 240px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+            resize: vertical;
+            min-height: 44px;
+        }
+
+        .answer-input:focus {
+            outline: none;
+            border-color: #ed8936;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(237,137,54,0.4);
+            font-family: inherit;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(237,137,54,0.6);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #ed8936;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            transform: translateX(-3px);
+            background: #fffaeb;
+        }
+
+        @media (max-width: 600px) {
+            .page-title h1 {
+                font-size: 24px;
+            }
+            .answer-form {
+                flex-direction: column;
+            }
+            .submit-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">💬</span>
+                <span class="logo-text">问题回复</span>
+            </div>
+            <nav class="nav">
+                <a href="/static" class="nav-link">问题墙</a>
+                <a href="/intro/lab.html" class="nav-link">实验室介绍</a>
+            </nav>
+            <div class="lab-name">
+                <span class="code-tag">&nbsp;/&nbsp;</span>
+                <span>井冈山大学软件创新实验室</span>
+                <span class="code-tag">&nbsp;/&nbsp;</span>
+            </div>
+            <a href="/static" class="btn-primary">
+                <span>← 返回问题墙</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="answer-page">
+        <div class="page-title">
+            <h1>📝 回复问题</h1>
+        </div>
+        <p class="page-subtitle">选择问题，写下你的答案喵～</p>
+
+        <div class="toolbar">
+            <input type="text" id="filter" class="filter-input" placeholder="🔍 搜索问题或作者喵...">
+            <button class="refresh-btn" onclick="loadQuestions()">
+                <span>🔄 刷新</span>
+            </button>
+        </div>
+
+        <div id="status" class="status-banner" style="display: none;"></div>
+
+        <div id="question-list" class="question-list">
+            <div class="empty-state">
+                <div class="icon">⏳</div>
+                <p>正在加载问题列表喵...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let allQuestions = [];
+
+        async function loadQuestions() {
+            const statusEl = document.getElementById('status');
+            const listEl = document.getElementById('question-list');
+            try {
+                statusEl.style.display = 'flex';
+                statusEl.className = 'status-banner';
+                statusEl.innerHTML = '<span>⏳</span><span>正在加载问题列表喵...</span>';
+
+                const resp = await fetch('/api/questions');
+                if (!resp.ok) throw new Error('获取问题失败：HTTP ' + resp.status);
+                allQuestions = await resp.json();
+                renderQuestions(allQuestions);
+                statusEl.style.display = 'none';
+            } catch (err) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">😿</div>
+                        <p>加载失败喵：${escapeHtml(err.message)}</p>
+                    </div>`;
+                statusEl.style.display = 'flex';
+                statusEl.className = 'status-banner error';
+                statusEl.innerHTML = `<span>⚠️</span><span>${escapeHtml(err.message)}</span>`;
+            }
+        }
+
+        function renderQuestions(questions) {
+            const listEl = document.getElementById('question-list');
+            if (!questions || questions.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>暂时还没有问题喵～去问题墙提一个吧！</p>
+                    </div>`;
+                return;
+            }
+
+            listEl.innerHTML = questions.map(q => {
+                const isAnswered = q.answer && q.answer.trim() !== '' && q.answer.trim() !== '待回答...';
+                const badgeClass = isAnswered ? 'answered' : 'pending';
+                const badgeText = isAnswered ? '✓ 已回复' : '⏳ 待回复';
+                const itemClass = isAnswered ? 'answered' : 'pending';
+                const currentAnswerHtml = isAnswered
+                    ? `<div class="current-answer">
+                            <div class="current-answer-label">当前回复：</div>
+                            <div class="current-answer-text">${escapeHtml(q.answer)}</div>
+                        </div>`
+                    : '';
+
+                return `
+                    <div class="question-item ${itemClass}">
+                        <div class="q-meta">
+                            <div class="q-title">${escapeHtml(q.title)}</div>
+                            <span class="q-badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        <div class="q-info">
+                            <span>💬 — 来自 ${escapeHtml(q.author || '匿名')}</span>
+                            ${q.created_at ? `<span>🕒 ${escapeHtml(q.created_at)}</span>` : ''}
+                            <span>🎨 ${escapeHtml(q.color)}</span>
+                        </div>
+                        ${currentAnswerHtml}
+                        <form class="answer-form" onsubmit="submitAnswer(event, '${escapeAttr(q.id)}')">
+                            <textarea class="answer-input" placeholder="写下你的回复喵..." required></textarea>
+                            <button type="submit" class="submit-btn">
+                                ${isAnswered ? '更新回复' : '提交回复'}
+                            </button>
+                        </form>
+                    </div>`;
+            }).join('');
+        }
+
+        async function submitAnswer(e, questionId) {
+            e.preventDefault();
+            const form = e.target;
+            const input = form.querySelector('.answer-input');
+            const btn = form.querySelector('.submit-btn');
+            const answer = input.value.trim();
+            if (!answer) return;
+
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '提交中...';
+
+            const statusEl = document.getElementById('status');
+            try {
+                const resp = await fetch('/api/questions/answer', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: questionId, answer: answer})
+                });
+
+                if (!resp.ok) throw new Error('回复失败：HTTP ' + resp.status);
+
+                statusEl.style.display = 'flex';
+                statusEl.className = 'status-banner success';
+                statusEl.innerHTML = '<span>✅</span><span>回复提交成功喵！</span>';
+                setTimeout(() => { statusEl.style.display = 'none'; }, 2500);
+
+                await loadQuestions();
+            } catch (err) {
+                statusEl.style.display = 'flex';
+                statusEl.className = 'status-banner error';
+                statusEl.innerHTML = `<span>⚠️</span><span>${escapeHtml(err.message)}</span>`;
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        document.getElementById('filter').addEventListener('input', (e) => {
+            const keyword = e.target.value.trim().toLowerCase();
+            if (!keyword) {
+                renderQuestions(allQuestions);
+                return;
+            }
+            const filtered = allQuestions.filter(q =>
+                (q.title || '').toLowerCase().includes(keyword) ||
+                (q.author || '').toLowerCase().includes(keyword) ||
+                (q.answer || '').toLowerCase().includes(keyword)
+            );
+            renderQuestions(filtered);
+        });
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttr(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/'/g, '&#39;')
+                .replace(/"/g, '&quot;');
+        }
+
+        loadQuestions();
+    </script>
+</body>
+</html>
