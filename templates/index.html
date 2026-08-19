@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>井冈山大学软件创新实验室 - 问题墙</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">💬</span>
+                <span class="logo-text">问题墙</span>
+            </div>
+            <nav class="nav">
+                <a href="#timeline" class="nav-link">实验室介绍</a>
+                <a href="#timeline" class="nav-link">招新活动</a>
+                <a href="#timeline" class="nav-link">联系我们</a>
+            </nav>
+            <div class="lab-name">
+                <span class="code-tag">&nbsp;/&nbsp;</span>
+                <span>井冈山大学软件创新实验室</span>
+                <span class="code-tag">&nbsp;/&nbsp;</span>
+            </div>
+            <button class="btn-primary" onclick="document.getElementById('modal').style.display='flex'">
+                <span>我要提问</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="layout">
+            <!-- Left Sidebar: Timeline -->
+            <aside class="sidebar">
+                <div class="timeline-card">
+                    <div class="timeline-header">
+                        <span class="star">✦</span>
+                        <h2>新生问答时间线</h2>
+                        <span class="star">✦</span>
+                    </div>
+                    <p class="timeline-subtitle">关注问题墙，解锁更多答案！</p>
+
+                    <div class="timeline">
+                        {% for event in timeline %}
+                        <div class="timeline-item timeline-{{ event.event_type }}">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-date">
+                                    <span class="date-main">{{ event.date }}</span>
+                                    <span class="date-weekday">{{ event.weekday }}</span>
+                                </div>
+                                <div class="timeline-time">{{ event.time }}</div>
+                                <div class="timeline-title">{{ event.title }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="timeline-footer">
+                        <span class="bell">🔔</span>
+                        <p>时间线会持续更新哦，记得常来看看！</p>
+                        <span class="heart">♥</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Content: Q&A Cards -->
+            <section class="content">
+                <div class="hero-banner">
+                    <span class="sparkle">✨</span>
+                    <h1>有问题？来这里就对啦！</h1>
+                    <span class="sparkle">✨</span>
+                </div>
+
+                <div class="qa-grid">
+                    {% for q in questions %}
+                    <div class="qa-card card-{{ q.color }}">
+                        <div class="question-sticky">
+                            <div class="pin">📌</div>
+                            <h3 class="question-text">{{ q.title }}</h3>
+                            <div class="question-author">
+                                <span class="msg-icon">💬</span>
+                                <span>— 来自 {{ q.author }}</span>
+                            </div>
+                        </div>
+                        <div class="answer-card">
+                            <div class="answer-pin">📎</div>
+                            <div class="answer-label">答：</div>
+                            <div class="answer-text">{{ q.answer }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Feature Sections -->
+                <div class="feature-sections">
+                    <div class="feature-card">
+                        <h4 class="feature-title">🎯 重点领域</h4>
+                        <ul class="feature-list">
+                            <li>→ 软件工程</li>
+                            <li>→ 人工智能</li>
+                            <li>→ 大数据</li>
+                            <li>→ 物联网</li>
+                            <li>→ 更多方向探索中...</li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="feature-title">🌟 成长收获</h4>
+                        <ul class="feature-list">
+                            <li>☐ 项目经验</li>
+                            <li>☐ 技术能力</li>
+                            <li>☐ 团队协作</li>
+                            <li>☐ 作品成果</li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="feature-title">📚 学习资源</h4>
+                        <ul class="feature-list">
+                            <li>📁 内部文档</li>
+                            <li>📁 学习资料库</li>
+                            <li>📁 技术分享会</li>
+                            <li>📁 学长学姐带飞</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bottom decoration -->
+                <div class="decoration-row">
+                    <span>💻</span>
+                    <span>☕</span>
+                    <span>🌱</span>
+                    <span>✨</span>
+                    <span>🚀</span>
+                </div>
+            </section>
+        </div>
+
+        <!-- Floating "Ask Question" button -->
+        <button class="fab" onclick="document.getElementById('modal').style.display='flex'">
+            <span class="fab-icon">+</span>
+            <span class="fab-text">提出新问题</span>
+        </button>
+    </main>
+
+    <!-- Modal for new question -->
+    <div id="modal" class="modal" onclick="if(event.target===this)this.style.display='none'">
+        <div class="modal-content">
+            <h3>✨ 提出新问题</h3>
+            <form id="question-form" onsubmit="submitQuestion(event)">
+                <input type="text" id="q-title" placeholder="你的问题是什么？" required>
+                <input type="text" id="q-author" placeholder="你的昵称" required>
+                <button type="submit" class="btn-primary btn-submit">提交提问</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function submitQuestion(e) {
+            e.preventDefault();
+            const title = document.getElementById('q-title').value;
+            const author = document.getElementById('q-author').value;
+            
+            const resp = await fetch('/api/questions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({title, author})
+            });
+            
+            if(resp.ok) {
+                document.getElementById('modal').style.display = 'none';
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
