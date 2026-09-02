@@ -1501,13 +1501,14 @@ dependencies = [
 
 [[package]]
 name = "soft26app"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "askama",
  "axum",
  "chrono",
  "dirs",
  "dotenv",
+ "log",
  "serde",
  "serde_json",
  "sqlx",

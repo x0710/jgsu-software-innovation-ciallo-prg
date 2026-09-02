@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>问题回复管理 - 井冈山大学软件创新实验室</title>
+    <link href="answer.css" rel="stylesheet">
+</head>
+<body>
+<!-- Header -->
+<header class="header">
+    <div class="header-left">
+        <span class="logo">📝</span>
+        <div class="header-title">
+            <h1>回复管理</h1>
+            <p>井冈山大学软件创新实验室 · 问题墙后台</p>
+        </div>
+    </div>
+    <div class="header-actions">
+        <a href="/static" class="btn-back">← 返回问题墙</a>
+        <button class="btn-primary" onclick="location.reload()">🔄 刷新</button>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="answer-page">
+    <div class="page-title">
+        <h1>💬 回复问题</h1>
+    </div>
+    <p class="page-subtitle">选择问题，写下你的答案喵～</p>
+
+    <div class="toolbar">
+        <input type="text" id="filter" class="filter-input" placeholder="🔍 搜索问题、作者或答案喵...">
+        <button class="refresh-btn" onclick="loadQuestions()">
+            <span>🔄 刷新列表</span>
+        </button>
+    </div>
+
+    <div id="status" class="status-banner" style="display: none;"></div>
+
+    <div id="question-list" class="question-list">
+        <div class="empty-state">
+            <div class="icon">⏳</div>
+            <p>正在加载问题列表喵...</p>
+        </div>
+    </div>
+</main>
+
+<script>
+    let allQuestions = [];
+
+    async function loadQuestions() {
+        const statusEl = document.getElementById('status');
+        const listEl = document.getElementById('question-list');
+
+        try {
+            statusEl.style.display = 'flex';
+            statusEl.className = 'status-banner info';
+            statusEl.innerHTML = '<span>⏳</span><span>正在加载问题列表喵...</span>';
+
+            const resp = await fetch('/api/questions');
+
+            if (!resp.ok) {
+                throw new Error('获取问题失败：HTTP ' + resp.status);
+            }
+
+            const data = await resp.json();
+            allQuestions = data;
+            renderQuestions(allQuestions);
+
+            statusEl.style.display = 'none';
+        } catch (err) {
+            listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">😿</div>
+                        <p>加载失败喵：${escapeHtml(err.message)}</p>
+                        <button onclick="loadQuestions()" style="margin-top:12px;padding:8px 24px;border-radius:20px;border:2px solid #7c4dff;background:white;color:#7c4dff;cursor:pointer;font-family:inherit;font-weight:600;">重试</button>
+                    </div>`;
+
+            statusEl.style.display = 'flex';
+            statusEl.className = 'status-banner error';
+            statusEl.innerHTML = `
+                    <span>⚠️</span>
+                    <span>${escapeHtml(err.message)}</span>
+                `;
+        }
+    }
+
+    function renderQuestions(questions) {
+        const listEl = document.getElementById('question-list');
+
+        if (!questions || questions.length === 0) {
+            listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>暂时还没有问题喵～去问题墙提一个吧！</p>
+                    </div>`;
+            return;
+        }
+
+        listEl.innerHTML = questions.map((qa, index) => {
+            const q = qa.question;
+            const answers = qa.answers || [];
+            const hasAnswers = answers.length > 0;
+
+            const badgeClass = hasAnswers ? 'answered' : 'pending';
+            const badgeText = hasAnswers ? `✓ ${answers.length} 个回复` : '⏳ 待回复';
+            const itemClass = hasAnswers ? 'answered' : 'pending';
+
+            // 渲染答案列表
+            let answersHtml = '';
+            if (hasAnswers) {
+                answersHtml = answers.map((answer, idx) => {
+                    const isFirst = idx === 0;
+                    return `
+                            <div class="answer-item ${isFirst ? 'answer-primary' : ''}">
+                                <div class="answer-header">
+                                    <div class="answer-label">
+                                        ${isFirst ? '⭐' : '📎'} 回复 ${idx + 1}
+                                        ${isFirst ? '<span class="badge-best">最新</span>' : ''}
+                                    </div>
+                                    <div class="answer-time">${escapeHtml(answer.created_at || '')}</div>
+                                </div>
+                                <div class="answer-text">${escapeHtml(answer.answer)}</div>
+                            </div>
+                        `;
+                }).join('');
+            } else {
+                answersHtml = `
+                        <div class="no-answers">💭 还没有回复，来写下第一个答案吧！</div>
+                    `;
+            }
+
+            const currentAnswerCount = hasAnswers ? answers.length : 0;
+
+            return `
+                    <div class="question-item ${itemClass}" data-id="${escapeAttr(q.id)}">
+                        <div class="q-meta">
+                            <div class="q-title">
+                                ${escapeHtml(q.title)}
+                            </div>
+                            <span class="q-badge ${badgeClass}">
+                                ${badgeText}
+                            </span>
+                        </div>
+
+                        <div class="q-info">
+                            <span>💬 — 来自 ${escapeHtml(q.author || '匿名')}</span>
+                            ${q.created_at ? `<span>🕒 ${escapeHtml(q.created_at)}</span>` : ''}
+                            <span>🎨 ${escapeHtml(q.color || '默认')}</span>
+                            <span>📝 ${currentAnswerCount} 个回答</span>
+                        </div>
+
+                        <div class="answers-section">
+                            <div class="answers-title">
+                                📋 全部回复 (${currentAnswerCount})
+                            </div>
+                            ${answersHtml}
+                        </div>
+
+                        <form class="answer-form" onsubmit="submitAnswer(event, '${escapeAttr(q.id)}')">
+                            <textarea
+                                class="answer-input"
+                                placeholder="写下你的回复喵..."
+                                required
+                            ></textarea>
+                            <div class="answer-form-actions">
+                                <button type="submit" class="submit-btn ${hasAnswers ? 'update-btn' : ''}">
+                                    ${hasAnswers ? '✏️ 添加新回复' : '💬 提交回复'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+        }).join('');
+    }
+
+    async function submitAnswer(e, questionId) {
+        e.preventDefault();
+
+        const form = e.target;
+        const input = form.querySelector('.answer-input');
+        const btn = form.querySelector('.submit-btn');
+
+        const answer = input.value.trim();
+
+        if (!answer) {
+            input.focus();
+            input.style.borderColor = '#ef5350';
+            setTimeout(() => { input.style.borderColor = ''; }, 2000);
+            return;
+        }
+
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+
+        const statusEl = document.getElementById('status');
+
+        try {
+            const resp = await fetch('/api/questions/answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: questionId,
+                    answer: answer
+                })
+            });
+
+            if (!resp.ok) {
+                const errorText = await resp.text();
+                throw new Error('回复失败：HTTP ' + resp.status + ' - ' + errorText);
+            }
+
+            statusEl.style.display = 'flex';
+            statusEl.className = 'status-banner success';
+            statusEl.innerHTML = `
+                    <span>✅</span>
+                    <span>回复提交成功喵！</span>
+                `;
+
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+
+            // 清空输入框
+            input.value = '';
+
+            // 刷新问题列表
+            await loadQuestions();
+
+            // 滚动到对应问题
+            const targetItem = document.querySelector(`.question-item[data-id="${questionId}"]`);
+            if (targetItem) {
+                targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetItem.style.boxShadow = '0 0 0 3px #7c4dff';
+                setTimeout(() => {
+                    targetItem.style.boxShadow = '';
+                }, 2000);
+            }
+        } catch (err) {
+            statusEl.style.display = 'flex';
+            statusEl.className = 'status-banner error';
+            statusEl.innerHTML = `
+                    <span>⚠️</span>
+                    <span>${escapeHtml(err.message)}</span>
+                `;
+
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    // 搜索过滤
+    document.getElementById('filter').addEventListener('input', (e) => {
+        const keyword = e.target.value.trim().toLowerCase();
+
+        if (!keyword) {
+            renderQuestions(allQuestions);
+            return;
+        }
+
+        const filtered = allQuestions.filter(qa => {
+            const q = qa.question;
+            const matchTitle = (q.title || '').toLowerCase().includes(keyword);
+            const matchAuthor = (q.author || '').toLowerCase().includes(keyword);
+            const matchAnswers = (qa.answers || []).some(a =>
+                (a.text || '').toLowerCase().includes(keyword)
+            );
+            return matchTitle || matchAuthor || matchAnswers;
+        });
+
+        renderQuestions(filtered);
+    });
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeAttr(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/'/g, '&#39;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // 初始化加载
+    loadQuestions();
+</script>
+</body>
+</html>

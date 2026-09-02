@@ -6,10 +6,21 @@ use sqlx::FromRow;
 pub struct Question {
     pub id: String,
     pub title: String,
-    pub answer: String,
     pub author: String,
     pub color: String,
     pub created_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct QuestionAnswers {
+    pub question: Question,
+    pub answers: Vec<Answer>,
+}
+
+#[derive(Debug, FromRow, Serialize, Clone)]
+pub struct Answer {
+    pub answer: String,
+    pub created_at: String,
 }
 
 #[derive(Debug, FromRow, Serialize, Clone, Eq, PartialOrd)]

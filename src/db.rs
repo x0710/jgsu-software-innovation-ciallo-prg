@@ -15,6 +15,17 @@ pub async fn create_pool(pool: SqlitePool) -> Result<SqlitePool, sqlx::Error> {
     .await?;
 
     sqlx::query(
+        "CREATE TABLE IF NOT EXISTS answers (
+            id TEXT PRIMARY KEY,
+            question_id TEXT NOT NULL REFERENCES questions(id),
+            answer TEXT NOT NULL DEFAULT '待回答...',
+            created_at TEXT
+        )"
+    )
+        .execute(&pool)
+        .await?;
+    
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS timeline_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,

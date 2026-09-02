@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图片展示</title>
+  <link href="../display.css" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+  <!-- 头部 -->
+  <div class="header">
+    <h1>
+      🖼️ 图片展示
+      <span id="imageCount"></span>
+    </h1>
+    <div class="header-controls">
+      <div class="view-controls">
+        <button class="view-btn active" data-view="grid" onclick="setView('grid')">📐 网格</button>
+        <button class="view-btn" data-view="list" onclick="setView('list')">📋 列表</button>
+      </div>
+      <button class="btn btn-secondary" onclick="selectAll()">☑️ 全选</button>
+      <button class="btn btn-secondary" onclick="deselectAll()">⬜ 取消</button>
+      <button class="btn btn-danger" onclick="deleteSelected()">🗑️ 删除</button>
+      <button class="btn btn-primary" onclick="refreshGallery()">🔄 刷新</button>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="stats" id="stats">
+    <div class="stats-item">
+      📸 图片总数：<strong id="totalCount">0</strong>
+    </div>
+    <div class="stats-item">
+      ✅ 已选：<strong id="selectedCount">0</strong>
+    </div>
+    <div class="stats-item">
+      📊 总大小：<strong id="totalSize">0 KB</strong>
+    </div>
+  </div>
+
+  <!-- 图片网格 -->
+  <div class="gallery-grid" id="gallery"></div>
+</div>
+
+<!-- 灯箱 -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="close-btn" onclick="closeLightbox(event)">✕</button>
+  <button class="nav-btn prev" onclick="navigateImage(-1, event)">‹</button>
+  <img id="lightbox-img" src="" alt="图片">
+  <button class="nav-btn next" onclick="navigateImage(1, event)">›</button>
+  <div class="image-counter" id="imageCounter"></div>
+</div>
+
+<script>
+  // ===== 图片数据 =====
+  const imageFiles = [
+    '15D050FAB2AE169F85945815658BB49A.jpg',
+    '38626A724CC66E575CBF7E418517A923.jpg',
+    '9F16FD2655824A9201066DE9071C0A06.jpg',
+    'A4C354F35F23F91175D830F31166101A.jpg',
+    'A5F143AB02E3D2F8FDC0D44C1DB4D13B.jpg'
+  ];
+
+  let images = [];
+  let selected = new Set();
+  let currentView = 'grid';
+  let currentLightboxIndex = 0;
+
+  // ===== 获取图片大小 =====
+  async function getImageSize(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  }
+
+  // ===== 格式化文件大小 =====
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  // ===== 加载图片 =====
+  async function loadImages() {
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = '<div style="text-align:center;padding:40px;color:#8c81aa;">⏳ 加载中...</div>';
+
+    images = [];
+
+    for (const file of imageFiles) {
+      const img = new Image();
+      img.src = file;
+
+      await new Promise((resolve) => {
+        img.onload = () => {
+          images.push({
+            name: file,
+            url: file,
+            width: img.width,
+            height: img.height
+          });
+          resolve();
+        };
+        img.onerror = () => {
+          // 图片加载失败，仍然记录但不显示
+          images.push({
+            name: file,
+            url: file,
+            width: 0,
+            height: 0,
+            error: true
+          });
+          resolve();
+        };
+        // 超时处理
+        setTimeout(resolve, 5000);
+      });
+    }
+
+    renderGallery();
+    updateStats();
+  }
+
+  // ===== 渲染画廊 =====
+  function renderGallery() {
+    const gallery = document.getElementById('gallery');
+    const validImages = images.filter(img => !img.error);
+
+    if (validImages.length === 0) {
+      gallery.innerHTML = `
+                    <div class="empty-state" style="grid-column:1/-1;">
+                        <div class="icon">📭</div>
+                        <p>没有找到可显示的图片喵～</p>
+                    </div>
+                `;
+      return;
+    }
+
+    gallery.innerHTML = validImages.map((img, index) => {
+      const isSelected = selected.has(index);
+      const size = formatSize(0); // 实际可获取文件大小
+
+      return `
+                    <div class="image-card" data-index="${index}" onclick="openLightbox(${index})">
+                        <div class="image-wrapper">
+                            <img src="${img.url}" alt="${img.name}" loading="lazy">
+                            <div class="image-checkbox ${isSelected ? 'checked' : ''}"
+                                 onclick="toggleSelect(${index}, event)"></div>
+                        </div>
+                        <div class="image-info">
+                            <span class="image-name" title="${img.name}">${img.name}</span>
+                            <span class="image-size">${img.width}×${img.height}</span>
+                        </div>
+                    </div>
+                `;
+    }).join('');
+
+    // 更新统计
+    updateStats();
+  }
+
+  // ===== 更新统计 =====
+  function updateStats() {
+    const validImages = images.filter(img => !img.error);
+    document.getElementById('totalCount').textContent = validImages.length;
+    document.getElementById('selectedCount').textContent = selected.size;
+    document.getElementById('imageCount').textContent = `(${validImages.length} 张)`;
+    document.getElementById('totalSize').textContent = formatSize(validImages.length * 1024 * 100); // 估算
+  }
+
+  // ===== 切换选择 =====
+  function toggleSelect(index, event) {
+    event.stopPropagation();
+    if (selected.has(index)) {
+      selected.delete(index);
+    } else {
+      selected.add(index);
+    }
+    renderGallery();
+    updateStats();
+  }
+
+  // ===== 全选 =====
+  function selectAll() {
+    const validImages = images.filter(img => !img.error);
+    validImages.forEach((_, i) => {
+      const realIndex = images.indexOf(validImages[i]);
+      selected.add(realIndex);
+    });
+    renderGallery();
+    updateStats();
+  }
+
+  // ===== 取消全选 =====
+  function deselectAll() {
+    selected.clear();
+    renderGallery();
+    updateStats();
+  }
+
+  // ===== 删除选中 =====
+  function deleteSelected() {
+    if (selected.size === 0) {
+      alert('请先选择要删除的图片喵～');
+      return;
+    }
+
+    if (confirm(`确定要删除 ${selected.size} 张图片吗？此操作不可恢复喵！`)) {
+      // 实际删除需要后端支持，这里只做前端演示
+      const sorted = Array.from(selected).sort((a, b) => b - a);
+      for (const index of sorted) {
+        images.splice(index, 1);
+      }
+      selected.clear();
+      renderGallery();
+      updateStats();
+    }
+  }
+
+  // ===== 刷新 =====
+  function refreshGallery() {
+    renderGallery();
+    updateStats();
+  }
+
+  // ===== 切换视图 =====
+  function setView(view) {
+    currentView = view;
+    const gallery = document.getElementById('gallery');
+    gallery.className = 'gallery-grid' + (view === 'list' ? ' list-view' : '');
+
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === view);
+    });
+  }
+
+  // ===== 灯箱 =====
+  function openLightbox(index) {
+    const validImages = images.filter(img => !img.error);
+    currentLightboxIndex = validImages.indexOf(images[index]);
+    if (currentLightboxIndex === -1) return;
+
+    const lightbox = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    const validIndex = validImages.indexOf(images[index]);
+    img.src = validImages[validIndex].url;
+    document.getElementById('imageCounter').textContent =
+            `${validIndex + 1} / ${validImages.length}`;
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox(event) {
+    if (event.target === event.currentTarget || event.target.classList.contains('close-btn')) {
+      const lightbox = document.getElementById('lightbox');
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  }
+
+  function navigateImage(direction, event) {
+    event.stopPropagation();
+    const validImages = images.filter(img => !img.error);
+    currentLightboxIndex = (currentLightboxIndex + direction + validImages.length) % validImages.length;
+    const img = document.getElementById('lightbox-img');
+    img.src = validImages[currentLightboxIndex].url;
+    document.getElementById('imageCounter').textContent =
+            `${currentLightboxIndex + 1} / ${validImages.length}`;
+  }
+
+  // ===== 键盘快捷键 =====
+  document.addEventListener('keydown', (e) => {
+    const lightbox = document.getElementById('lightbox');
+    if (lightbox.classList.contains('active')) {
+      if (e.key === 'Escape') {
+        closeLightbox({ target: lightbox, currentTarget: lightbox });
+      } else if (e.key === 'ArrowLeft') {
+        navigateImage(-1, { stopPropagation: () => {} });
+      } else if (e.key === 'ArrowRight') {
+        navigateImage(1, { stopPropagation: () => {} });
+      }
+    }
+  });
+
+  // ===== 初始化 =====
+  loadImages();
+</script>
+</body>
+</html>

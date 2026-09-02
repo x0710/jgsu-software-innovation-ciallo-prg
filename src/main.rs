@@ -11,7 +11,7 @@ use tower_http::services::ServeDir;
 use tracing::{debug, info, trace, warn};
 
 pub const QUESTION: &'static str = "/api/questions";
-pub const ANSWER: &'static str = "/api/quesitons/answer";
+pub const ANSWER: &'static str = "/api/questions/answer";
 
 #[tokio::main]
 async fn main() {
@@ -80,11 +80,13 @@ RUST_LOG=info
         .nest_service("/static", ServeDir::new("static"))
         .layer(CorsLayer::permissive())
         .with_state(pool);
-    trace!("API list: {:?}", app);
-    info!("Question api: {}", QUESTION);
-    info!("Answer api: {}", ANSWER);
 
     let addr = std::env::var("ADDR").unwrap_or_else(|_| "[::]:3000".to_string());
+
+    trace!("API list: {:?}", app);
+    info!("Question link: http://{}/static/114514/Ciallo/CS2/Pubg/666/hhh/answer.html", addr);
+    info!("Answer api: {}", ANSWER);
+
 
     info!("Server will be running at `http://{}`", addr);
 
