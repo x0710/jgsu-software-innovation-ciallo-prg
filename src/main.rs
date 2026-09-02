@@ -2,10 +2,13 @@ mod db;
 mod models;
 mod routes;
 
+use axum::{
+    routing::{get, post},
+    Router,
+};
+use sqlx::SqlitePool;
 use std::io::Write;
 use std::path::Path;
-use axum::{routing::{get, post}, Router};
-use sqlx::SqlitePool;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tracing::{debug, info, trace, warn};
@@ -23,20 +26,17 @@ ADDR=[::]:3000
 RUST_LOG=info
 "#,
             )
-                .inspect(|_| info!("Created .env file"))
-                .inspect_err(|e| warn!(err=?e, "Failed to create .env file"))
-                .ok();
+            .inspect(|_| info!("Created .env file"))
+            .inspect_err(|e| warn!(err=?e, "Failed to create .env file"))
+            .ok();
         }
-
     }
 
     let log_level = tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "soft26app=info".into());
+        .unwrap_or_else(|_| "soft26app=info".into());
     info!("Logging initialized: {}", log_level);
 
-    tracing_subscriber::fmt()
-        .with_env_filter(log_level)
-        .init();
+    tracing_subscriber::fmt().with_env_filter(log_level).init();
 
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://./blog.db".to_string());
@@ -53,24 +53,20 @@ RUST_LOG=info
         debug!("Database parent directory: {:?}", parent.canonicalize());
 
         if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)
-                .expect("Failed to create parent directory");
+            std::fs::create_dir_all(parent).expect("Failed to create parent directory");
         }
         if !db_path.exists() {
             std::fs::File::create(&db_path).expect("Failed to create db file");
         }
     }
 
-    let pool = SqlitePool::connect(&database_url).await
+    let pool = SqlitePool::connect(&database_url)
+        .await
         .expect("Failed to connect to the database");
 
-    let pool = db::create_pool(pool)
-        .await
-        .expect("Failed to create pool");
+    let pool = db::create_pool(pool).await.expect("Failed to create pool");
 
-    db::seed_data(&pool)
-        .await
-        .expect("Failed to seed data");
+    db::seed_data(&pool).await.expect("Failed to seed data");
 
     let app = Router::new()
         .route("/", get(routes::index))
@@ -84,9 +80,11 @@ RUST_LOG=info
     let addr = std::env::var("ADDR").unwrap_or_else(|_| "[::]:3000".to_string());
 
     trace!("API list: {:?}", app);
-    info!("Question link: http://{}/static/114514/Ciallo/CS2/Pubg/666/hhh/answer.html", addr);
-    info!("Answer api: {}", ANSWER);
-
+    info!(
+        "Answer link: http://{}/static/114514/Ciallo/CS2/Pubg/666/hhh/answer.html",
+        addr
+    );
+    info!("Question api: {}", ANSWER);
 
     info!("Server will be running at `http://{}`", addr);
 
@@ -94,8 +92,5 @@ RUST_LOG=info
         .await
         .expect("Failed to bind");
 
-    axum::serve(listener, app)
-        .await
-        .expect("Failed to serve");
-
+    axum::serve(listener, app).await.expect("Failed to serve");
 }

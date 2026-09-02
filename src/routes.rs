@@ -16,16 +16,14 @@ struct IndexTemplate {
 }
 
 pub async fn index(State(pool): State<SqlitePool>) -> Result<Html<String>, StatusCode> {
-    let questions = get_questions(&pool).await
-        .map_err(|e| {
-            error!(error=?e, "error getting questions");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-    let mut timeline = get_timeline(&pool).await
-        .map_err(|e| {
-            error!(error=?e, "error getting timeline");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let questions = get_questions(&pool).await.map_err(|e| {
+        error!(error=?e, "error getting questions");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    let mut timeline = get_timeline(&pool).await.map_err(|e| {
+        error!(error=?e, "error getting timeline");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     timeline.sort();
 
     let template = IndexTemplate {
@@ -39,37 +37,50 @@ pub async fn index(State(pool): State<SqlitePool>) -> Result<Html<String>, Statu
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
-pub async fn _timeline_api(State(pool): State<SqlitePool>) -> Result<Json<Vec<TimelineEvent>>, StatusCode> {
-    Ok(Json(get_timeline(&pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+pub async fn _timeline_api(
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<TimelineEvent>>, StatusCode> {
+    Ok(Json(
+        get_timeline(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
 }
 
-pub async fn questions_api(State(pool): State<SqlitePool>) -> Result<Json<Vec<QuestionAnswers>>, StatusCode> {
-    Ok(Json(get_questions(&pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+pub async fn questions_api(
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<QuestionAnswers>>, StatusCode> {
+    Ok(Json(
+        get_questions(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
 }
 
 async fn get_timeline(pool: &SqlitePool) -> Result<Vec<TimelineEvent>, sqlx::Error> {
-    let timeline = sqlx::query_as::<_, TimelineEvent>("SELECT * FROM timeline_events ORDER BY date")
-        .fetch_all(pool)
-        .await?;
+    let timeline =
+        sqlx::query_as::<_, TimelineEvent>("SELECT * FROM timeline_events ORDER BY date")
+            .fetch_all(pool)
+            .await?;
     Ok(timeline)
 }
 
 async fn get_questions(pool: &SqlitePool) -> Result<Vec<QuestionAnswers>, sqlx::Error> {
-    let questions = sqlx::query_as::<_, Question>("SELECT * FROM questions ORDER BY created_at DESC")
-        .fetch_all(pool)
-        .await
-        .inspect_err(|e| error!(err=?e, "Get questions failed."))?;
-    let mut res = Vec::with_capacity(questions.len());
-    for question in questions {
-        let answers = sqlx::query_as::<_, Answer>("SELECT answer, created_at FROM answers WHERE question_id = ? ORDER BY created_at DESC")
-            .bind(&question.id)
+    let questions =
+        sqlx::query_as::<_, Question>("SELECT * FROM questions ORDER BY created_at DESC")
             .fetch_all(pool)
             .await
-            .inspect_err(|e| error!(err=?e, "Get answers failed."))?;
-        res.push(QuestionAnswers {
-            question,
-            answers,
-        });
+            .inspect_err(|e| error!(err=?e, "Get questions failed."))?;
+    let mut res = Vec::with_capacity(questions.len());
+    for question in questions {
+        let answers = sqlx::query_as::<_, Answer>(
+            "SELECT answer, created_at FROM answers WHERE question_id = ? ORDER BY created_at DESC",
+        )
+        .bind(&question.id)
+        .fetch_all(pool)
+        .await
+        .inspect_err(|e| error!(err=?e, "Get answers failed."))?;
+        res.push(QuestionAnswers { question, answers });
     }
     Ok(res)
 }
@@ -107,7 +118,7 @@ pub async fn answer_question(
     State(pool): State<SqlitePool>,
     Json(payload): Json<NewAnswer>,
 ) -> Result<(), StatusCode> {
-    trace!(q=payload.id, "Answer Question");
+    trace!(q = payload.id, "Answer Question");
     let id = uuid::Uuid::new_v4().to_string();
     sqlx::query(
         "INSERT INTO answers(id, question_id, answer, created_at) VALUES (?, ?, ?, datetime('now'))",

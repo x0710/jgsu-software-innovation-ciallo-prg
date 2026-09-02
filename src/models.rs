@@ -1,6 +1,6 @@
-use std::cmp::Ordering;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::cmp::Ordering;
 
 #[derive(Debug, FromRow, Serialize, Clone)]
 pub struct Question {
@@ -33,10 +33,14 @@ pub struct TimelineEvent {
     pub event_type: String,
 }
 impl PartialEq for TimelineEvent {
-    fn eq(&self, other: &Self) -> bool { self.id == other.id }
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 impl Ord for TimelineEvent {
-    fn cmp(&self, other: &Self) -> Ordering { self.id.cmp(&other.id) }
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id.cmp(&other.id)
+    }
 }
 
 #[derive(Debug, Deserialize)]

@@ -5,11 +5,10 @@ pub async fn create_pool(pool: SqlitePool) -> Result<SqlitePool, sqlx::Error> {
         "CREATE TABLE IF NOT EXISTS questions (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
-            answer TEXT NOT NULL DEFAULT '待回答...',
             author TEXT NOT NULL,
             color TEXT NOT NULL DEFAULT 'yellow',
             created_at TEXT
-        )"
+        )",
     )
     .execute(&pool)
     .await?;
@@ -20,11 +19,11 @@ pub async fn create_pool(pool: SqlitePool) -> Result<SqlitePool, sqlx::Error> {
             question_id TEXT NOT NULL REFERENCES questions(id),
             answer TEXT NOT NULL DEFAULT '待回答...',
             created_at TEXT
-        )"
+        )",
     )
-        .execute(&pool)
-        .await?;
-    
+    .execute(&pool)
+    .await?;
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS timeline_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +32,7 @@ pub async fn create_pool(pool: SqlitePool) -> Result<SqlitePool, sqlx::Error> {
             time TEXT NOT NULL,
             title TEXT NOT NULL,
             event_type TEXT NOT NULL DEFAULT 'info'
-        )"
+        )",
     )
     .execute(&pool)
     .await?;
@@ -57,35 +56,39 @@ pub async fn seed_data(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
 async fn seed_questions(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let questions = vec![
-        (
-            "实验室主要研究什么？",
-            "我们聚焦软件工程、人工智能、大数据、物联网等方向的研究与实践，致力于用代码解决实际问题，产出有价值的创新成果。",
-            "小萌新",
-            "yellow",
-        ),
-        (
-            "新生可以参加哪些项目？",
-            "提供多样化项目机会，覆盖不同方向：\n• 校内外学科竞赛（蓝桥杯、挑战杯等）\n• 企业合作项目实践\n• 科研课题参与\n• 开源项目共建\n总有一款适合你！",
-            "好奇宝宝",
-            "orange",
-        ),
-        (
-            "需要提前学习哪些技术？",
-            "不用焦虑！我们更看重学习能力和兴趣~\n建议先掌握这些基础：\n• 一门编程语言（C/Java/Python任选其一）\n• 数据结构与算法基础\n• 计算机基础知识（操作系统、网络等）\n实验室会提供系统的学习资源和培训！",
-            "预备役",
-            "pink",
-        ),
+        ("实验室主要研究什么？", "小萌新", "yellow"),
+        ("新生可以参加哪些项目？", "好奇宝宝", "orange"),
+        ("需要提前学习哪些技术？", "预备役", "pink"),
     ];
+    let answers = vec![
+        "我们聚焦软件工程、人工智能、大数据、物联网等方向的研究与实践，致力于用代码解决实际问题，产出有价值的创新成果。",
+        "提供多样化项目机会，覆盖不同方向：\n• 校内外学科竞赛（蓝桥杯、挑战杯等）\n• 企业合作项目实践\n• 科研课题参与\n• 开源项目共建\n总有一款适合你！",
+        "不用焦虑！我们更看重学习能力和兴趣~\n建议先掌握这些基础：\n• 一门编程语言（C/Java/Python任选其一）\n• 数据结构与算法基础\n• 计算机基础知识（操作系统、网络等）\n实验室会提供系统的学习资源和培训！",
+    ];
+    let mut uid = Vec::with_capacity(answers.len());
 
-    for (title, answer, author, color) in &questions {
+    for (title, author, color) in &questions {
+        let id = uuid::Uuid::new_v4().to_string();
         sqlx::query(
-            "INSERT INTO questions (id, title, answer, author, color, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))"
+            "INSERT INTO questions (id, title, author, color, created_at) VALUES (?, ?, ?, ?, datetime('now'))"
         )
-        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(&id)
         .bind(title)
-        .bind(answer)
         .bind(author)
         .bind(color)
+        .execute(pool)
+        .await?;
+        uid.push(id)
+    }
+
+    for (answer, uuid) in answers.into_iter().zip(uid.into_iter()) {
+        let id = uuid::Uuid::new_v4().to_string();
+        sqlx::query(
+            "INSERT INTO answers(id, question_id, answer, created_at) VALUES (?, ?, ?, datetime('now'))"
+        )
+        .bind(&id)
+        .bind(&uuid)
+        .bind(answer)
         .execute(pool)
         .await?;
     }
