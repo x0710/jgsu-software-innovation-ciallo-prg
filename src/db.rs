@@ -1,12 +1,6 @@
 use sqlx::SqlitePool;
-use std::env;
 
-pub async fn create_pool() -> Result<SqlitePool, sqlx::Error> {
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://blog.db".to_string());
-
-    let pool = SqlitePool::connect(&database_url).await?;
-
+pub async fn create_pool(pool: SqlitePool) -> Result<SqlitePool, sqlx::Error> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS questions (
             id TEXT PRIMARY KEY,
